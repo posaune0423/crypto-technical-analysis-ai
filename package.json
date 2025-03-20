@@ -7,7 +7,9 @@
     "dev": "ts-node --transpile-only src/index.ts",
     "build": "tsc",
     "watch": "tsc --watch",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push"
   },
   "keywords": [
     "crypto",
@@ -27,21 +29,28 @@
     "semi": true
   },
   "dependencies": {
+    "@libsql/client": "^0.15.0",
     "@types/express": "^5.0.1",
     "@types/node": "^20.11.26",
     "@types/node-schedule": "^2.1.6",
     "@types/ws": "^8.5.10",
     "axios": "^1.6.7",
-    "dotenv": "^16.4.5",
+    "better-sqlite3": "^11.9.1",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.40.1",
     "express": "^4.19.2",
     "node-schedule": "^2.1.1",
+    "sqlite3": "^5.1.7",
     "technicalindicators": "^3.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.2",
     "ws": "^8.16.0"
   },
   "devDependencies": {
-    "prettier": "^3.5.3"
+    "@types/better-sqlite3": "^7.6.12",
+    "drizzle-kit": "^0.30.5",
+    "prettier": "^3.5.3",
+    "tsx": "^4.19.3"
   },
   "packageManager": "pnpm@10.6.3",
   "engines": {

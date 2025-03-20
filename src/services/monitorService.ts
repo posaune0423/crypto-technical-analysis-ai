@@ -1,9 +1,9 @@
+import { config } from "../config/config";
+import { AnalysisResult, AssetConfig } from "../types";
+import { Logger, LogLevel } from "../utils/logger";
+import { AlertService } from "./alertService";
 import { ExchangeService } from "./exchangeService";
 import { TechnicalAnalysisService } from "./technicalAnalysisService";
-import { AlertService } from "./alertService";
-import { AnalysisResult, AssetConfig } from "../models/types";
-import { config } from "../config/config";
-import { Logger, LogLevel } from "../utils/logger";
 
 export class MonitorService {
   private exchangeService: ExchangeService;

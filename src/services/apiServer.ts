@@ -1,9 +1,9 @@
-import express, { Request, Response, NextFunction, Router, RequestHandler } from 'express';
-import http from 'http';
-import WebSocket from 'ws';
-import { MonitorService } from './monitorService';
-import { AssetConfig, AnalysisResult } from '../models/types';
-import { config } from '../config/config';
+import express, { Request, RequestHandler, Response, Router } from "express";
+import http from "http";
+import WebSocket from "ws";
+import { config } from "../config/config";
+import { AnalysisResult, AssetConfig } from "../types";
+import { MonitorService } from "./monitorService";
 
 export class ApiServer {
   private app: express.Application;
@@ -45,9 +45,9 @@ export class ApiServer {
 
     // CORS middleware
     this.app.use((req: Request, res: Response, next) => {
-      res.header('Access-Control-Allow-Origin', '*');
-      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.header("Access-Control-Allow-Origin", "*");
+      res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+      res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
       next();
     });
 
@@ -63,8 +63,8 @@ export class ApiServer {
    */
   private handleNotFound: RequestHandler = (req, res) => {
     res.status(404).json({
-      status: 'error',
-      message: 'Endpoint not found',
+      status: "error",
+      message: "Endpoint not found",
     });
   };
 
@@ -76,8 +76,8 @@ export class ApiServer {
 
     if (!symbol) {
       res.status(400).json({
-        status: 'error',
-        message: 'Symbol is required',
+        status: "error",
+        message: "Symbol is required",
       });
       return;
     }
@@ -88,14 +88,14 @@ export class ApiServer {
       alert: {
         enabled: alert?.enabled !== undefined ? alert.enabled : true,
         threshold: alert?.threshold || config.alerts.threshold,
-        indicators: alert?.indicators || ['RSI', 'MACD', 'BOLLINGER', 'EMA', 'VOLUME']
-      }
+        indicators: alert?.indicators || ["RSI", "MACD", "BOLLINGER", "EMA", "VOLUME"],
+      },
     };
 
     this.monitorService.addAsset(asset);
 
     res.json({
-      status: 'ok',
+      status: "ok",
       message: `Added ${symbol} to monitored assets`,
       data: asset,
     });
@@ -109,8 +109,8 @@ export class ApiServer {
 
     if (!interval || interval < 1000) {
       res.status(400).json({
-        status: 'error',
-        message: 'Interval must be at least 1000ms',
+        status: "error",
+        message: "Interval must be at least 1000ms",
       });
       return;
     }
@@ -118,7 +118,7 @@ export class ApiServer {
     this.monitorService.setPollingInterval(interval);
 
     res.json({
-      status: 'ok',
+      status: "ok",
       message: `Polling interval updated to ${interval}ms`,
     });
   };
@@ -128,101 +128,107 @@ export class ApiServer {
    */
   private setupRoutes(): void {
     // Root endpoint
-    this.router.get('/', (req: Request, res: Response) => {
+    this.router.get("/", (req: Request, res: Response) => {
       res.json({
-        status: 'ok',
-        message: 'Crypto Technical Analysis AI API is running',
+        status: "ok",
+        message: "Crypto Technical Analysis AI API is running",
       });
     });
 
     // Get all monitored assets
-    this.router.get('/api/assets', (req: Request, res: Response) => {
+    this.router.get("/api/assets", (req: Request, res: Response) => {
       res.json({
-        status: 'ok',
+        status: "ok",
         data: this.monitorService.getAssets(),
       });
     });
 
     // Add new asset to monitor
-    this.router.post('/api/assets', this.handleAddAsset);
+    this.router.post("/api/assets", this.handleAddAsset);
 
     // Remove an asset from monitoring
-    this.router.delete('/api/assets/:symbol', (req: Request, res: Response) => {
+    this.router.delete("/api/assets/:symbol", (req: Request, res: Response) => {
       const { symbol } = req.params;
 
       this.monitorService.removeAsset(symbol);
 
       res.json({
-        status: 'ok',
+        status: "ok",
         message: `Removed ${symbol} from monitored assets`,
       });
     });
 
     // Start monitoring
-    this.router.post('/api/monitor/start', (req: Request, res: Response) => {
+    this.router.post("/api/monitor/start", (req: Request, res: Response) => {
       this.monitorService.start();
 
       res.json({
-        status: 'ok',
-        message: 'Market monitoring started',
+        status: "ok",
+        message: "Market monitoring started",
       });
     });
 
     // Stop monitoring
-    this.router.post('/api/monitor/stop', (req: Request, res: Response) => {
+    this.router.post("/api/monitor/stop", (req: Request, res: Response) => {
       this.monitorService.stop();
 
       res.json({
-        status: 'ok',
-        message: 'Market monitoring stopped',
+        status: "ok",
+        message: "Market monitoring stopped",
       });
     });
 
     // Update polling interval
-    this.router.put('/api/monitor/interval', this.handleUpdateInterval);
+    this.router.put("/api/monitor/interval", this.handleUpdateInterval);
   }
 
   /**
    * Set up WebSocket server
    */
   private setupWebSocket(): void {
-    this.wss.on('connection', (ws: WebSocket) => {
-      console.log('Client connected to WebSocket');
+    this.wss.on("connection", (ws: WebSocket) => {
+      console.log("Client connected to WebSocket");
 
       // Send welcome message
-      ws.send(JSON.stringify({
-        type: 'connection',
-        message: 'Connected to Crypto Technical Analysis AI WebSocket',
-        timestamp: Date.now(),
-      }));
+      ws.send(
+        JSON.stringify({
+          type: "connection",
+          message: "Connected to Crypto Technical Analysis AI WebSocket",
+          timestamp: Date.now(),
+        }),
+      );
 
       // Handle client messages
-      ws.on('message', (messageData: WebSocket.Data) => {
+      ws.on("message", (messageData: WebSocket.Data) => {
         try {
           const message = messageData.toString();
           const data = JSON.parse(message);
 
           // Handle different message types
-          if (data.type === 'subscribe') {
+          if (data.type === "subscribe") {
             console.log(`Client subscribed to ${data.symbols}`);
             // You can store client subscriptions here
-            ws.send(JSON.stringify({
-              type: 'subscribed',
-              symbols: data.symbols,
-            }));
+            ws.send(
+              JSON.stringify({
+                type: "subscribed",
+                symbols: data.symbols,
+              }),
+            );
           }
         } catch (error) {
-          console.error('Error handling WebSocket message:', error);
-          ws.send(JSON.stringify({
-            type: 'error',
-            message: 'Invalid message format',
-          }));
+          console.error("Error handling WebSocket message:", error);
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Invalid message format",
+            }),
+          );
         }
       });
 
       // Handle disconnection
-      ws.on('close', () => {
-        console.log('Client disconnected from WebSocket');
+      ws.on("close", () => {
+        console.log("Client disconnected from WebSocket");
       });
     });
   }
@@ -246,7 +252,7 @@ export class ApiServer {
     }
 
     const message = JSON.stringify({
-      type: 'analysis',
+      type: "analysis",
       data: result,
       timestamp: Date.now(),
     });
@@ -268,7 +274,7 @@ export class ApiServer {
     }
 
     const message = JSON.stringify({
-      type: 'alert',
+      type: "alert",
       data: alert,
       timestamp: Date.now(),
     });
