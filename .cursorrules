@@ -1,0 +1,4 @@
+# IMPORTANT RULES
+
+- package managerはpnpmを使用する
+- ファイル更新後はbuildが通るかどうかを最後に一度だけ確認する

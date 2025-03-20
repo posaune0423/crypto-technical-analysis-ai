@@ -1,0 +1,50 @@
+{
+  "name": "crypto-technical-analysis-ai",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "ts-node --transpile-only src/index.ts",
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "format": "prettier --write ."
+  },
+  "keywords": [
+    "crypto",
+    "trading",
+    "technical-analysis",
+    "ai"
+  ],
+  "author": "",
+  "license": "ISC",
+  "description": "Crypto perpetual trading technical analysis AI agent",
+  "prettier": {
+    "singleQuote": false,
+    "trailingComma": "all",
+    "printWidth": 120,
+    "tabWidth": 2,
+    "useTabs": false,
+    "semi": true
+  },
+  "dependencies": {
+    "@types/express": "^5.0.1",
+    "@types/node": "^20.11.26",
+    "@types/node-schedule": "^2.1.6",
+    "@types/ws": "^8.5.10",
+    "axios": "^1.6.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-schedule": "^2.1.1",
+    "technicalindicators": "^3.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.2",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3"
+  },
+  "packageManager": "pnpm@10.6.3",
+  "engines": {
+    "node": ">=20.11.0"
+  }
+}
