@@ -1,7 +1,7 @@
 import express, { Request, RequestHandler, Response, Router } from "express";
 import http from "http";
 import WebSocket from "ws";
-import { config } from "../config/config";
+import { config } from "../config";
 import { AnalysisResult, AssetConfig } from "../types";
 import { MonitorService } from "./monitorService";
 

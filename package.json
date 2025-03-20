@@ -36,6 +36,7 @@
     "@types/ws": "^8.5.10",
     "axios": "^1.6.7",
     "better-sqlite3": "^11.9.1",
+    "bybit-api": "^4.0.1",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.40.1",
     "express": "^4.19.2",

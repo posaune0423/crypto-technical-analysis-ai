@@ -1,6 +1,6 @@
 import axios from "axios";
 import crypto from "crypto";
-import { config } from "../config/config";
+import { config } from "../config";
 import { Candle } from "../types";
 import { Logger, LogLevel } from "../utils/logger";
 

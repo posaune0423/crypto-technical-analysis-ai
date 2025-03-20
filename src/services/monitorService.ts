@@ -1,4 +1,4 @@
-import { config } from "../config/config";
+import { config } from "../config";
 import { AnalysisResult, AssetConfig } from "../types";
 import { Logger, LogLevel } from "../utils/logger";
 import { AlertService } from "./alertService";
@@ -126,7 +126,6 @@ export class MonitorService {
 
           // Fetch candle data
           const candles = await this.exchangeService.getCandles(asset.symbol, timeframe, 100);
-          this.logger.debug("Monitor:", "candles", candles);
 
           if (candles.length < 50) {
             this.logger.warn(

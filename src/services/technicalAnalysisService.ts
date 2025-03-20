@@ -1,5 +1,5 @@
 import { BollingerBands, EMA, MACD, RSI, SMA } from "technicalindicators";
-import { config } from "../config/config";
+import { config } from "../config";
 import {
   AnalysisResult,
   BollingerBandsResult,
