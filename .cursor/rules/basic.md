@@ -25,3 +25,15 @@
 - Express
 - Drizzle ORM
 - Sqlite
+
+## Dir Structure
+
+```bash
+src/
+  ├── config/ # 設定ファイル
+  ├── lib/ # ライブラリ(e.g. `bybitClient.ts`)
+  ├── models/ # モデル(e.g. `signal.ts`)
+  ├── services/ # サービス(e.g. `tradeExecutor.ts`)
+  ├── utils/ # ユーティリティ(e.g. `logger.ts`)
+  └── index.ts # エントリーポイント
+```

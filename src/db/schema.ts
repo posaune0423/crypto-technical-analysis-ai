@@ -1,14 +1,5 @@
 import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-// usersテーブルの定義
-export const users = sqliteTable("users", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  createdAt: text("created_at").notNull().default(new Date().toISOString()),
-  updatedAt: text("updated_at").notNull().default(new Date().toISOString()),
-});
-
 // トレードシグナルのテーブル定義
 export const tradeSignals = sqliteTable("trade_signals", {
   id: integer("id").primaryKey({ autoIncrement: true }),

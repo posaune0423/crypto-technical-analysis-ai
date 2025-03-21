@@ -104,5 +104,20 @@ export interface AnalysisResult {
     neutralSignals: number;
     overallSentiment: "BULLISH" | "BEARISH" | "NEUTRAL";
     confidenceScore: number; // 0-100
+    direction: "bullish" | "bearish" | "neutral"; // 取引方向
   };
 }
+
+// 取引シグナルの方向
+export type SignalDirection = "BUY" | "SELL";
+
+// 取引戦略
+export type SignalStrategy =
+  | "TREND_FOLLOWING"
+  | "RSI_OVERSOLD"
+  | "RSI_OVERBOUGHT"
+  | "MACD_BULLISH"
+  | "MACD_BEARISH"
+  | "EMA_CROSSOVER"
+  | "BREAKOUT"
+  | "MANUAL";
