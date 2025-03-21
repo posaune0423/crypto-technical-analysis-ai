@@ -1,8 +1,8 @@
-import axios from 'axios';
-import crypto from 'crypto';
-import { config } from '../config/config';
-import { Candle } from '../models/types';
-import { Logger, LogLevel } from '../utils/logger';
+import axios from "axios";
+import crypto from "crypto";
+import { config } from "../config";
+import { Candle } from "../types";
+import { Logger, LogLevel } from "../utils/logger";
 
 export class ExchangeService {
   private baseUrl: string;
@@ -16,7 +16,7 @@ export class ExchangeService {
     this.apiSecret = config.exchange.apiSecret;
 
     this.logger = new Logger({
-      level: config.app.nodeEnv === 'development' ? LogLevel.DEBUG : LogLevel.INFO,
+      level: config.app.nodeEnv === "development" ? LogLevel.DEBUG : LogLevel.INFO,
       enableTimestamp: true,
       enableColors: true,
     });
@@ -34,11 +34,11 @@ export class ExchangeService {
       // Convert timeframes to Bybit format
       const bybitInterval = this.convertTimeframeToBybit(interval);
 
-      this.logger.debug('Exchange', `Fetching ${symbol} candles for ${interval} (${bybitInterval})`, { limit });
+      this.logger.debug("Exchange", `Fetching ${symbol} candles for ${interval} (${bybitInterval})`, { limit });
 
       const response = await axios.get(`${this.baseUrl}/v5/market/kline`, {
         params: {
-          category: 'linear',
+          category: "linear",
           symbol: symbol.toUpperCase(),
           interval: bybitInterval,
           limit,
@@ -46,15 +46,15 @@ export class ExchangeService {
       });
 
       if (response.data.retCode !== 0) {
-        this.logger.error('Exchange', `Bybit API error: ${response.data.retMsg}`, {
+        this.logger.error("Exchange", `Bybit API error: ${response.data.retMsg}`, {
           symbol,
           interval,
-          retCode: response.data.retCode
+          retCode: response.data.retCode,
         });
         throw new Error(`Bybit API error: ${response.data.retMsg}`);
       }
 
-      this.logger.debug('Exchange', `Received ${response.data.result.list.length} candles for ${symbol}`);
+      this.logger.debug("Exchange", `Received ${response.data.result.list.length} candles for ${symbol}`);
 
       return response.data.result.list.map((candle: string[]) => ({
         timestamp: parseInt(candle[0]),
@@ -65,7 +65,7 @@ export class ExchangeService {
         volume: parseFloat(candle[5]),
       }));
     } catch (error) {
-      this.logger.error('Exchange', `Error fetching candles for ${symbol}`, error);
+      this.logger.error("Exchange", `Error fetching candles for ${symbol}`, error);
       throw error;
     }
   }
@@ -77,24 +77,24 @@ export class ExchangeService {
    */
   private convertTimeframeToBybit(timeframe: string): string {
     const mapping: Record<string, string> = {
-      '1m': '1',
-      '3m': '3',
-      '5m': '5',
-      '15m': '15',
-      '30m': '30',
-      '1h': '60',
-      '2h': '120',
-      '4h': '240',
-      '6h': '360',
-      '12h': '720',
-      '1d': 'D',
-      '1w': 'W',
-      '1M': 'M'
+      "1m": "1",
+      "3m": "3",
+      "5m": "5",
+      "15m": "15",
+      "30m": "30",
+      "1h": "60",
+      "2h": "120",
+      "4h": "240",
+      "6h": "360",
+      "12h": "720",
+      "1d": "D",
+      "1w": "W",
+      "1M": "M",
     };
 
     const bybitTimeframe = mapping[timeframe];
     if (!bybitTimeframe) {
-      this.logger.error('Exchange', `Unsupported timeframe: ${timeframe}`);
+      this.logger.error("Exchange", `Unsupported timeframe: ${timeframe}`);
       throw new Error(`Unsupported timeframe: ${timeframe}`);
     }
 
@@ -109,28 +109,28 @@ export class ExchangeService {
    */
   async getRecentTrades(symbol: string, limit = 500) {
     try {
-      this.logger.debug('Exchange', `Fetching recent trades for ${symbol}`, { limit });
+      this.logger.debug("Exchange", `Fetching recent trades for ${symbol}`, { limit });
 
       const response = await axios.get(`${this.baseUrl}/v5/market/recent-trade`, {
         params: {
-          category: 'linear',
+          category: "linear",
           symbol: symbol.toUpperCase(),
           limit,
         },
       });
 
       if (response.data.retCode !== 0) {
-        this.logger.error('Exchange', `Bybit API error: ${response.data.retMsg}`, {
+        this.logger.error("Exchange", `Bybit API error: ${response.data.retMsg}`, {
           symbol,
-          retCode: response.data.retCode
+          retCode: response.data.retCode,
         });
         throw new Error(`Bybit API error: ${response.data.retMsg}`);
       }
 
-      this.logger.debug('Exchange', `Received ${response.data.result.list.length} trades for ${symbol}`);
+      this.logger.debug("Exchange", `Received ${response.data.result.list.length} trades for ${symbol}`);
       return response.data.result.list;
     } catch (error) {
-      this.logger.error('Exchange', `Error fetching recent trades for ${symbol}`, error);
+      this.logger.error("Exchange", `Error fetching recent trades for ${symbol}`, error);
       throw error;
     }
   }
@@ -142,29 +142,29 @@ export class ExchangeService {
    */
   async getMarkPrice(symbol: string) {
     try {
-      this.logger.debug('Exchange', `Fetching mark price for ${symbol}`);
+      this.logger.debug("Exchange", `Fetching mark price for ${symbol}`);
 
       const response = await axios.get(`${this.baseUrl}/v5/market/tickers`, {
         params: {
-          category: 'linear',
+          category: "linear",
           symbol: symbol.toUpperCase(),
         },
       });
 
       if (response.data.retCode !== 0) {
-        this.logger.error('Exchange', `Bybit API error: ${response.data.retMsg}`, {
+        this.logger.error("Exchange", `Bybit API error: ${response.data.retMsg}`, {
           symbol,
-          retCode: response.data.retCode
+          retCode: response.data.retCode,
         });
         throw new Error(`Bybit API error: ${response.data.retMsg}`);
       }
 
       const markPrice = response.data.result.list[0];
-      this.logger.debug('Exchange', `Mark price for ${symbol}`, { price: markPrice.lastPrice });
+      this.logger.debug("Exchange", `Mark price for ${symbol}`, { price: markPrice.lastPrice });
 
       return markPrice;
     } catch (error) {
-      this.logger.error('Exchange', `Error fetching mark price for ${symbol}`, error);
+      this.logger.error("Exchange", `Error fetching mark price for ${symbol}`, error);
       throw error;
     }
   }
@@ -177,28 +177,28 @@ export class ExchangeService {
    */
   async getOrderBook(symbol: string, limit = 100) {
     try {
-      this.logger.debug('Exchange', `Fetching order book for ${symbol}`, { limit });
+      this.logger.debug("Exchange", `Fetching order book for ${symbol}`, { limit });
 
       const response = await axios.get(`${this.baseUrl}/v5/market/orderbook`, {
         params: {
-          category: 'linear',
+          category: "linear",
           symbol: symbol.toUpperCase(),
           limit,
         },
       });
 
       if (response.data.retCode !== 0) {
-        this.logger.error('Exchange', `Bybit API error: ${response.data.retMsg}`, {
+        this.logger.error("Exchange", `Bybit API error: ${response.data.retMsg}`, {
           symbol,
-          retCode: response.data.retCode
+          retCode: response.data.retCode,
         });
         throw new Error(`Bybit API error: ${response.data.retMsg}`);
       }
 
-      this.logger.debug('Exchange', `Received order book for ${symbol}`);
+      this.logger.debug("Exchange", `Received order book for ${symbol}`);
       return response.data.result;
     } catch (error) {
-      this.logger.error('Exchange', `Error fetching order book for ${symbol}`, error);
+      this.logger.error("Exchange", `Error fetching order book for ${symbol}`, error);
       throw error;
     }
   }
@@ -211,28 +211,28 @@ export class ExchangeService {
    */
   async getFundingRateHistory(symbol: string, limit = 100) {
     try {
-      this.logger.debug('Exchange', `Fetching funding rate history for ${symbol}`, { limit });
+      this.logger.debug("Exchange", `Fetching funding rate history for ${symbol}`, { limit });
 
       const response = await axios.get(`${this.baseUrl}/v5/market/funding/history`, {
         params: {
-          category: 'linear',
+          category: "linear",
           symbol: symbol.toUpperCase(),
           limit,
         },
       });
 
       if (response.data.retCode !== 0) {
-        this.logger.error('Exchange', `Bybit API error: ${response.data.retMsg}`, {
+        this.logger.error("Exchange", `Bybit API error: ${response.data.retMsg}`, {
           symbol,
-          retCode: response.data.retCode
+          retCode: response.data.retCode,
         });
         throw new Error(`Bybit API error: ${response.data.retMsg}`);
       }
 
-      this.logger.debug('Exchange', `Received ${response.data.result.list.length} funding rates for ${symbol}`);
+      this.logger.debug("Exchange", `Received ${response.data.result.list.length} funding rates for ${symbol}`);
       return response.data.result.list;
     } catch (error) {
-      this.logger.error('Exchange', `Error fetching funding rate history for ${symbol}`, error);
+      this.logger.error("Exchange", `Error fetching funding rate history for ${symbol}`, error);
       throw error;
     }
   }
@@ -244,10 +244,10 @@ export class ExchangeService {
    * @param params Request parameters
    * @returns Response data
    */
-  async signedRequest(endpoint: string, method = 'GET', params: any = {}) {
+  async signedRequest(endpoint: string, method = "GET", params: any = {}) {
     if (!this.apiKey || !this.apiSecret) {
-      this.logger.error('Exchange', 'API key and secret required for signed requests');
-      throw new Error('API key and secret required for signed requests');
+      this.logger.error("Exchange", "API key and secret required for signed requests");
+      throw new Error("API key and secret required for signed requests");
     }
 
     const timestamp = Date.now();
@@ -258,7 +258,7 @@ export class ExchangeService {
       ...params,
       api_key: this.apiKey,
       timestamp,
-      recv_window: recvWindow
+      recv_window: recvWindow,
     };
 
     // Sort parameters alphabetically by key
@@ -271,46 +271,43 @@ export class ExchangeService {
 
     // Convert to query string
     const queryString = Object.keys(sortedParams)
-      .map(key => `${key}=${sortedParams[key]}`)
-      .join('&');
+      .map((key) => `${key}=${sortedParams[key]}`)
+      .join("&");
 
     // Create signature
-    const signature = crypto
-      .createHmac('sha256', this.apiSecret)
-      .update(queryString)
-      .digest('hex');
+    const signature = crypto.createHmac("sha256", this.apiSecret).update(queryString).digest("hex");
 
     try {
       const url = `${this.baseUrl}${endpoint}`;
 
-      this.logger.debug('Exchange', `Making ${method} request to ${endpoint}`, { method, timestamp });
+      this.logger.debug("Exchange", `Making ${method} request to ${endpoint}`, { method, timestamp });
 
       // Add signature to parameters
       const requestParams = {
         ...sortedParams,
-        sign: signature
+        sign: signature,
       };
 
       let response;
-      if (method === 'GET') {
+      if (method === "GET") {
         response = await axios.get(url, { params: requestParams });
-      } else if (method === 'POST') {
+      } else if (method === "POST") {
         response = await axios.post(url, requestParams);
       }
 
       if (response?.data?.retCode !== 0) {
-        this.logger.error('Exchange', `Bybit API error: ${response?.data?.retMsg}`, {
+        this.logger.error("Exchange", `Bybit API error: ${response?.data?.retMsg}`, {
           endpoint,
           method,
-          retCode: response?.data?.retCode
+          retCode: response?.data?.retCode,
         });
         throw new Error(`Bybit API error: ${response?.data?.retMsg}`);
       }
 
-      this.logger.debug('Exchange', `Successful ${method} request to ${endpoint}`);
+      this.logger.debug("Exchange", `Successful ${method} request to ${endpoint}`);
       return response?.data?.result;
     } catch (error) {
-      this.logger.error('Exchange', `Error in signed request to ${endpoint}`, error);
+      this.logger.error("Exchange", `Error in signed request to ${endpoint}`, error);
       throw error;
     }
   }

@@ -1,21 +1,15 @@
+import { BollingerBands, EMA, MACD, RSI, SMA } from "technicalindicators";
+import { config } from "../config";
 import {
-  RSI,
-  MACD,
-  BollingerBands,
-  EMA,
-  SMA
-} from 'technicalindicators';
-import {
-  Candle,
-  RSIResult,
-  MACDResult,
+  AnalysisResult,
   BollingerBandsResult,
+  Candle,
   EMACrossResult,
-  VolumeAnalysisResult,
+  MACDResult,
   MarketSignal,
-  AnalysisResult
-} from '../models/types';
-import { config } from '../config/config';
+  RSIResult,
+  VolumeAnalysisResult,
+} from "../types";
 
 export class TechnicalAnalysisService {
   /**
@@ -29,12 +23,12 @@ export class TechnicalAnalysisService {
       throw new Error(`Not enough candles for RSI calculation. Need at least ${period} candles.`);
     }
 
-    const prices = candles.map(candle => candle.close);
-    const timestamps = candles.map(candle => candle.timestamp);
+    const prices = candles.map((candle) => candle.close);
+    const timestamps = candles.map((candle) => candle.timestamp);
 
     const rsiValues = RSI.calculate({
       values: prices,
-      period: period
+      period: period,
     });
 
     // Pad the beginning with nulls since RSI needs 'period' candles to start calculating
@@ -50,7 +44,7 @@ export class TechnicalAnalysisService {
         timestamp,
         value,
         isOverbought: value >= config.indicators.rsi.overbought,
-        isOversold: value <= config.indicators.rsi.oversold
+        isOversold: value <= config.indicators.rsi.oversold,
       });
     }
 
@@ -69,14 +63,14 @@ export class TechnicalAnalysisService {
     candles: Candle[],
     fastPeriod = config.indicators.macd.fastPeriod,
     slowPeriod = config.indicators.macd.slowPeriod,
-    signalPeriod = config.indicators.macd.signalPeriod
+    signalPeriod = config.indicators.macd.signalPeriod,
   ): MACDResult[] {
     if (candles.length < slowPeriod + signalPeriod) {
       throw new Error(`Not enough candles for MACD calculation. Need at least ${slowPeriod + signalPeriod} candles.`);
     }
 
-    const prices = candles.map(candle => candle.close);
-    const timestamps = candles.map(candle => candle.timestamp);
+    const prices = candles.map((candle) => candle.close);
+    const timestamps = candles.map((candle) => candle.timestamp);
 
     const macdValues = MACD.calculate({
       values: prices,
@@ -84,7 +78,7 @@ export class TechnicalAnalysisService {
       slowPeriod,
       signalPeriod,
       SimpleMAOscillator: false,
-      SimpleMASignal: false
+      SimpleMASignal: false,
     });
 
     // Pad the beginning with nulls (MACD needs more candles to start calculating)
@@ -114,7 +108,7 @@ export class TechnicalAnalysisService {
         signal: signal || 0,
         histogram: histogramValue,
         isBullish: (histogramValue > 0 && histogramIncreasing) || (histogramValue < 0 && histogramIncreasing),
-        isBearish: (histogramValue < 0 && histogramDecreasing) || (histogramValue > 0 && histogramDecreasing)
+        isBearish: (histogramValue < 0 && histogramDecreasing) || (histogramValue > 0 && histogramDecreasing),
       });
 
       prevHistogram = histogramValue;
@@ -133,19 +127,19 @@ export class TechnicalAnalysisService {
   calculateBollingerBands(
     candles: Candle[],
     period = config.indicators.bollinger.period,
-    stdDev = config.indicators.bollinger.stdDev
+    stdDev = config.indicators.bollinger.stdDev,
   ): BollingerBandsResult[] {
     if (candles.length < period) {
       throw new Error(`Not enough candles for Bollinger Bands calculation. Need at least ${period} candles.`);
     }
 
-    const prices = candles.map(candle => candle.close);
-    const timestamps = candles.map(candle => candle.timestamp);
+    const prices = candles.map((candle) => candle.close);
+    const timestamps = candles.map((candle) => candle.timestamp);
 
     const bbValues = BollingerBands.calculate({
       values: prices,
       period,
-      stdDev
+      stdDev,
     });
 
     // Pad the beginning with nulls
@@ -168,7 +162,7 @@ export class TechnicalAnalysisService {
         lower,
         isAboveUpper: currentPrice > upper,
         isBelowLower: currentPrice < lower,
-        bandwidth
+        bandwidth,
       });
     }
 
@@ -182,40 +176,38 @@ export class TechnicalAnalysisService {
    * @param slowPeriod Slow EMA period (default: 21)
    * @returns EMA cross results
    */
-  calculateEMACross(
-    candles: Candle[],
-    fastPeriod = 9,
-    slowPeriod = 21
-  ): EMACrossResult {
+  calculateEMACross(candles: Candle[], fastPeriod = 9, slowPeriod = 21): EMACrossResult {
     // We need at least {slowPeriod} candles to calculate EMA
     if (candles.length < Math.max(fastPeriod, slowPeriod) + 5) {
       return {
-        signal: 'neutral',
-        direction: 'none',
+        signal: "neutral",
+        direction: "none",
         strength: 0,
         crossover: false,
         shortEma: [],
         longEma: [],
-        message: `Not enough data for EMA cross calculation. Need at least ${Math.max(fastPeriod, slowPeriod) + 5} candles, but got ${candles.length}.`
+        message: `Not enough data for EMA cross calculation. Need at least ${Math.max(fastPeriod, slowPeriod) + 5} candles, but got ${candles.length}.`,
       };
     }
 
-    const prices = candles.map(candle => candle.close);
-    const timestamps = candles.map(candle => candle.timestamp);
+    const prices = candles.map((candle) => candle.close);
+    const timestamps = candles.map((candle) => candle.timestamp);
 
     const fastEMA = EMA.calculate({
       values: prices,
-      period: fastPeriod
+      period: fastPeriod,
     });
 
     const slowEMA = EMA.calculate({
       values: prices,
-      period: slowPeriod
+      period: slowPeriod,
     });
 
     // Both arrays should have the same length after this point
     const paddingLength = prices.length - slowEMA.length;
-    const fastEMAPadded = Array(paddingLength).fill(null).concat(fastEMA.slice(fastEMA.length - slowEMA.length));
+    const fastEMAPadded = Array(paddingLength)
+      .fill(null)
+      .concat(fastEMA.slice(fastEMA.length - slowEMA.length));
 
     const results: EMACrossResult[] = [];
 
@@ -237,7 +229,7 @@ export class TechnicalAnalysisService {
         fastEMA: fastEMAValue,
         slowEMA: slowEMAValue,
         isCrossOver,
-        isCrossUnder
+        isCrossUnder,
       });
 
       prevFastEMA = fastEMAValue;
@@ -245,13 +237,16 @@ export class TechnicalAnalysisService {
     }
 
     return {
-      signal: results.length > 0 ? (results[results.length - 1].isCrossOver ? 'bullish' : 'bearish') : 'neutral',
-      direction: results.length > 0 ? (results[results.length - 1].isCrossOver ? 'up' : 'down') : 'none',
+      signal: results.length > 0 ? (results[results.length - 1].isCrossOver ? "bullish" : "bearish") : "neutral",
+      direction: results.length > 0 ? (results[results.length - 1].isCrossOver ? "up" : "down") : "none",
       strength: results.length > 0 ? 7 : 0,
       crossover: results.length > 0 ? results[results.length - 1].isCrossOver : false,
       shortEma: fastEMA,
       longEma: slowEMA,
-      message: results.length > 0 ? `EMA ${fastPeriod}/${slowPeriod} ${results[results.length - 1].isCrossOver ? 'bullish' : 'bearish'} crossover` : 'No EMA cross detected'
+      message:
+        results.length > 0
+          ? `EMA ${fastPeriod}/${slowPeriod} ${results[results.length - 1].isCrossOver ? "bullish" : "bearish"} crossover`
+          : "No EMA cross detected",
     };
   }
 
@@ -261,23 +256,20 @@ export class TechnicalAnalysisService {
    * @param period Period for volume average (default: 20)
    * @returns Volume analysis results
    */
-  analyzeVolume(
-    candles: Candle[],
-    period = config.indicators.volume.period
-  ): VolumeAnalysisResult[] {
+  analyzeVolume(candles: Candle[], period = config.indicators.volume.period): VolumeAnalysisResult[] {
     if (candles.length < period) {
       throw new Error(`Not enough candles for volume analysis. Need at least ${period} candles.`);
     }
 
-    const volumes = candles.map(candle => candle.volume);
-    const timestamps = candles.map(candle => candle.timestamp);
+    const volumes = candles.map((candle) => candle.volume);
+    const timestamps = candles.map((candle) => candle.timestamp);
 
     const results: VolumeAnalysisResult[] = [];
 
     // Calculate SMA for volume
     const volumeSMA = SMA.calculate({
       values: volumes,
-      period
+      period,
     });
 
     // Pad the beginning with nulls
@@ -300,7 +292,7 @@ export class TechnicalAnalysisService {
         volume: currentVolume,
         averageVolume,
         isHighVolume,
-        volumeChange
+        volumeChange,
       });
     }
 
@@ -316,7 +308,7 @@ export class TechnicalAnalysisService {
    */
   analyzeMarket(symbol: string, timeframe: string, candles: Candle[]): AnalysisResult {
     if (candles.length < 50) {
-      throw new Error('Not enough candles for comprehensive analysis');
+      throw new Error("Not enough candles for comprehensive analysis");
     }
 
     const signals: MarketSignal[] = [];
@@ -330,9 +322,9 @@ export class TechnicalAnalysisService {
 
     // EMA Crosses (multiple periods)
     const emaCrosses = [
-      this.calculateEMACross(candles, 9, 21),    // Short-term
-      this.calculateEMACross(candles, 21, 50),   // Medium-term
-      this.calculateEMACross(candles, 50, 200)   // Long-term
+      this.calculateEMACross(candles, 9, 21), // Short-term
+      this.calculateEMACross(candles, 21, 50), // Medium-term
+      this.calculateEMACross(candles, 50, 200), // Long-term
     ];
 
     const volumeResults = this.analyzeVolume(candles);
@@ -351,11 +343,11 @@ export class TechnicalAnalysisService {
           timeframe,
           timestamp,
           price: currentPrice,
-          signalType: 'OVERSOLD',
-          indicator: 'RSI',
+          signalType: "OVERSOLD",
+          indicator: "RSI",
           strength: 7, // Scale 1-10
           message: `RSI is oversold (${latestRSI.value.toFixed(2)})`,
-          action: 'BUY'
+          action: "BUY",
         });
       } else if (latestRSI.isOverbought) {
         signals.push({
@@ -363,11 +355,11 @@ export class TechnicalAnalysisService {
           timeframe,
           timestamp,
           price: currentPrice,
-          signalType: 'OVERBOUGHT',
-          indicator: 'RSI',
+          signalType: "OVERBOUGHT",
+          indicator: "RSI",
           strength: 7,
           message: `RSI is overbought (${latestRSI.value.toFixed(2)})`,
-          action: 'SELL'
+          action: "SELL",
         });
       }
 
@@ -383,11 +375,11 @@ export class TechnicalAnalysisService {
             timeframe,
             timestamp,
             price: currentPrice,
-            signalType: 'BULLISH_DIVERGENCE',
-            indicator: 'RSI',
+            signalType: "BULLISH_DIVERGENCE",
+            indicator: "RSI",
             strength: 8,
-            message: 'Bullish divergence detected (price down, RSI up)',
-            action: 'BUY'
+            message: "Bullish divergence detected (price down, RSI up)",
+            action: "BUY",
           });
         }
 
@@ -400,11 +392,11 @@ export class TechnicalAnalysisService {
             timeframe,
             timestamp,
             price: currentPrice,
-            signalType: 'BEARISH_DIVERGENCE',
-            indicator: 'RSI',
+            signalType: "BEARISH_DIVERGENCE",
+            indicator: "RSI",
             strength: 8,
-            message: 'Bearish divergence detected (price up, RSI down)',
-            action: 'SELL'
+            message: "Bearish divergence detected (price up, RSI down)",
+            action: "SELL",
           });
         }
       }
@@ -418,11 +410,11 @@ export class TechnicalAnalysisService {
           timeframe,
           timestamp,
           price: currentPrice,
-          signalType: 'BULLISH_CROSS',
-          indicator: 'MACD',
+          signalType: "BULLISH_CROSS",
+          indicator: "MACD",
           strength: 6,
-          message: 'MACD bullish cross detected',
-          action: 'BUY'
+          message: "MACD bullish cross detected",
+          action: "BUY",
         });
       } else if (latestMACD.histogram < 0 && macdResults[macdResults.length - 2].histogram >= 0) {
         signals.push({
@@ -430,11 +422,11 @@ export class TechnicalAnalysisService {
           timeframe,
           timestamp,
           price: currentPrice,
-          signalType: 'BEARISH_CROSS',
-          indicator: 'MACD',
+          signalType: "BEARISH_CROSS",
+          indicator: "MACD",
           strength: 6,
-          message: 'MACD bearish cross detected',
-          action: 'SELL'
+          message: "MACD bearish cross detected",
+          action: "SELL",
         });
       }
     }
@@ -447,11 +439,11 @@ export class TechnicalAnalysisService {
           timeframe,
           timestamp,
           price: currentPrice,
-          signalType: 'PRICE_ABOVE_UPPER_BAND',
-          indicator: 'BOLLINGER',
+          signalType: "PRICE_ABOVE_UPPER_BAND",
+          indicator: "BOLLINGER",
           strength: 5,
-          message: 'Price above upper Bollinger Band',
-          action: 'SELL'
+          message: "Price above upper Bollinger Band",
+          action: "SELL",
         });
       } else if (latestBB.isBelowLower) {
         signals.push({
@@ -459,11 +451,11 @@ export class TechnicalAnalysisService {
           timeframe,
           timestamp,
           price: currentPrice,
-          signalType: 'PRICE_BELOW_LOWER_BAND',
-          indicator: 'BOLLINGER',
+          signalType: "PRICE_BELOW_LOWER_BAND",
+          indicator: "BOLLINGER",
           strength: 5,
-          message: 'Price below lower Bollinger Band',
-          action: 'BUY'
+          message: "Price below lower Bollinger Band",
+          action: "BUY",
         });
       }
 
@@ -479,11 +471,11 @@ export class TechnicalAnalysisService {
             timeframe,
             timestamp,
             price: currentPrice,
-            signalType: 'BOLLINGER_SQUEEZE',
-            indicator: 'BOLLINGER',
+            signalType: "BOLLINGER_SQUEEZE",
+            indicator: "BOLLINGER",
             strength: 7,
-            message: 'Bollinger Bands squeezing (potential breakout)',
-            action: 'WATCH'
+            message: "Bollinger Bands squeezing (potential breakout)",
+            action: "WATCH",
           });
         }
       }
@@ -491,7 +483,7 @@ export class TechnicalAnalysisService {
 
     // Generate signals from EMA crosses
     emaCrosses.forEach((emaCross, index) => {
-      const periods = index === 0 ? '9/21' : index === 1 ? '21/50' : '50/200';
+      const periods = index === 0 ? "9/21" : index === 1 ? "21/50" : "50/200";
       const latestCross = emaCross;
 
       if (latestCross.crossover) {
@@ -500,11 +492,11 @@ export class TechnicalAnalysisService {
           timeframe,
           timestamp,
           price: currentPrice,
-          signalType: latestCross.signal === 'bullish' ? 'EMA_CROSS_OVER' : 'EMA_CROSS_UNDER',
+          signalType: latestCross.signal === "bullish" ? "EMA_CROSS_OVER" : "EMA_CROSS_UNDER",
           indicator: `EMA_${periods}`,
           strength: index === 2 ? 9 : index === 1 ? 7 : 5, // Stronger for longer periods
           message: `EMA ${periods} ${latestCross.signal} crossover`,
-          action: latestCross.signal === 'bullish' ? 'BUY' : 'SELL'
+          action: latestCross.signal === "bullish" ? "BUY" : "SELL",
         });
       }
     });
@@ -519,35 +511,33 @@ export class TechnicalAnalysisService {
         timeframe,
         timestamp,
         price: currentPrice,
-        signalType: priceIncrease ? 'HIGH_VOLUME_BULLISH' : 'HIGH_VOLUME_BEARISH',
-        indicator: 'VOLUME',
+        signalType: priceIncrease ? "HIGH_VOLUME_BULLISH" : "HIGH_VOLUME_BEARISH",
+        indicator: "VOLUME",
         strength: 6,
         message: `High volume detected (${latestVolume.volumeChange.toFixed(2)}% above average)`,
-        action: priceIncrease ? 'BUY' : 'SELL'
+        action: priceIncrease ? "BUY" : "SELL",
       });
     }
 
     // Calculate summary metrics
-    const bullishSignals = signals.filter(s => s.action === 'BUY').length;
-    const bearishSignals = signals.filter(s => s.action === 'SELL').length;
-    const neutralSignals = signals.filter(s => s.action === 'WATCH' || s.action === 'HOLD').length;
+    const bullishSignals = signals.filter((s) => s.action === "BUY").length;
+    const bearishSignals = signals.filter((s) => s.action === "SELL").length;
+    const neutralSignals = signals.filter((s) => s.action === "WATCH" || s.action === "HOLD").length;
 
-    let overallSentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    let overallSentiment: "BULLISH" | "BEARISH" | "NEUTRAL";
 
     if (bullishSignals > bearishSignals * 1.5) {
-      overallSentiment = 'BULLISH';
+      overallSentiment = "BULLISH";
     } else if (bearishSignals > bullishSignals * 1.5) {
-      overallSentiment = 'BEARISH';
+      overallSentiment = "BEARISH";
     } else {
-      overallSentiment = 'NEUTRAL';
+      overallSentiment = "NEUTRAL";
     }
 
     // Calculate confidence score (0-100)
     const totalSignalStrength = signals.reduce((sum, signal) => sum + signal.strength, 0);
     const maxPossibleStrength = signals.length * 10; // Maximum possible strength
-    const confidenceScore = maxPossibleStrength > 0
-      ? Math.round((totalSignalStrength / maxPossibleStrength) * 100)
-      : 0;
+    const confidenceScore = maxPossibleStrength > 0 ? Math.round((totalSignalStrength / maxPossibleStrength) * 100) : 0;
 
     return {
       symbol,
@@ -558,8 +548,8 @@ export class TechnicalAnalysisService {
         rsi: latestRSI,
         macd: latestMACD,
         bollinger: latestBB,
-        emaCross: emaCrosses.map(cross => cross),
-        volumeAnalysis: latestVolume
+        emaCross: emaCrosses.map((cross) => cross),
+        volumeAnalysis: latestVolume,
       },
       signals,
       summary: {
@@ -567,8 +557,9 @@ export class TechnicalAnalysisService {
         bearishSignals,
         neutralSignals,
         overallSentiment,
-        confidenceScore
-      }
+        confidenceScore,
+        direction: overallSentiment === "BULLISH" ? "bullish" : overallSentiment === "BEARISH" ? "bearish" : "neutral",
+      },
     };
   }
 }

@@ -49,3 +49,6 @@ coverage/
 
 # Project specific
 .history/
+
+# Database
+sqlite.db

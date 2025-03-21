@@ -1,11 +1,13 @@
-import axios from 'axios';
-import { AnalysisResult, MarketSignal } from '../models/types';
-import { config } from '../config/config';
+import axios from "axios";
+import { config } from "../config";
+import { AnalysisResult, MarketSignal } from "../types";
+import { Logger, LogLevel } from "../utils/logger";
 
 export class AlertService {
   private previousAnalysis: Map<string, AnalysisResult>;
   private telegramBotToken: string;
   private telegramChatId: string;
+  private logger: Logger;
   private alertThreshold: number;
 
   constructor() {
@@ -13,6 +15,11 @@ export class AlertService {
     this.telegramBotToken = config.telegram.botToken;
     this.telegramChatId = config.telegram.chatId;
     this.alertThreshold = config.alerts.threshold;
+    this.logger = new Logger({
+      level: LogLevel.DEBUG,
+      enableColors: true,
+      enableTimestamp: true,
+    });
   }
 
   /**
@@ -21,6 +28,7 @@ export class AlertService {
    * @returns Array of alerts (if any)
    */
   processAnalysisResult(analysis: AnalysisResult): MarketSignal[] {
+    this.logger.debug("AlertService", `Processing analysis result for ${analysis.symbol} on ${analysis.timeframe}`);
     const key = `${analysis.symbol}-${analysis.timeframe}`;
     const previousAnalysis = this.previousAnalysis.get(key);
     const alerts: MarketSignal[] = [];
@@ -33,13 +41,13 @@ export class AlertService {
 
     // Check for significant changes in indicators
     // First, filter for strong signals
-    const strongSignals = analysis.signals.filter(signal => signal.strength >= this.alertThreshold);
+    const strongSignals = analysis.signals.filter((signal) => signal.strength >= this.alertThreshold);
 
     // Add signals that weren't present in the previous analysis
     for (const signal of strongSignals) {
       const signatureString = `${signal.indicator}_${signal.signalType}`;
       const previousSignal = previousAnalysis.signals.find(
-        ps => ps.indicator === signal.indicator && ps.signalType === signal.signalType
+        (ps) => ps.indicator === signal.indicator && ps.signalType === signal.signalType,
       );
 
       if (!previousSignal) {
@@ -55,28 +63,33 @@ export class AlertService {
         timeframe: analysis.timeframe,
         timestamp: analysis.timestamp,
         price: analysis.price,
-        signalType: 'SENTIMENT_CHANGE',
-        indicator: 'COMBINED',
+        signalType: "SENTIMENT_CHANGE",
+        indicator: "COMBINED",
         strength: 8,
         message: `Market sentiment changed from ${previousAnalysis.summary.overallSentiment} to ${analysis.summary.overallSentiment}`,
-        action: analysis.summary.overallSentiment === 'BULLISH' ? 'BUY' :
-               analysis.summary.overallSentiment === 'BEARISH' ? 'SELL' : 'WATCH'
+        action:
+          analysis.summary.overallSentiment === "BULLISH"
+            ? "BUY"
+            : analysis.summary.overallSentiment === "BEARISH"
+              ? "SELL"
+              : "WATCH",
       });
     }
 
     // Check for significant price movement
     const priceChangePercent = ((analysis.price - previousAnalysis.price) / previousAnalysis.price) * 100;
-    if (Math.abs(priceChangePercent) >= 3) { // 3% price movement threshold
+    if (Math.abs(priceChangePercent) >= 3) {
+      // 3% price movement threshold
       alerts.push({
         symbol: analysis.symbol,
         timeframe: analysis.timeframe,
         timestamp: analysis.timestamp,
         price: analysis.price,
-        signalType: 'PRICE_MOVEMENT',
-        indicator: 'PRICE',
+        signalType: "PRICE_MOVEMENT",
+        indicator: "PRICE",
         strength: 7,
         message: `Significant price movement: ${priceChangePercent.toFixed(2)}% in ${analysis.timeframe} timeframe`,
-        action: priceChangePercent > 0 ? 'BUY' : 'SELL'
+        action: priceChangePercent > 0 ? "BUY" : "SELL",
       });
     }
 
@@ -97,7 +110,7 @@ export class AlertService {
    */
   private async sendAlert(signal: MarketSignal): Promise<void> {
     // Always log to console
-    console.log('🚨 ALERT:', JSON.stringify(signal, null, 2));
+    console.log("🚨 ALERT:", JSON.stringify(signal, null, 2));
 
     // If Telegram is configured, send a message
     if (this.telegramBotToken && this.telegramChatId) {
@@ -105,16 +118,13 @@ export class AlertService {
         // Format a nice message for Telegram
         const formattedText = this.formatTelegramMessage(signal);
 
-        await axios.post(
-          `https://api.telegram.org/bot${this.telegramBotToken}/sendMessage`,
-          {
-            chat_id: this.telegramChatId,
-            text: formattedText,
-            parse_mode: 'Markdown'
-          }
-        );
+        await axios.post(`https://api.telegram.org/bot${this.telegramBotToken}/sendMessage`, {
+          chat_id: this.telegramChatId,
+          text: formattedText,
+          parse_mode: "Markdown",
+        });
       } catch (error) {
-        console.error('Failed to send Telegram alert:', error);
+        console.error("Failed to send Telegram alert:", error);
       }
     }
 
@@ -127,17 +137,18 @@ export class AlertService {
    * @returns Formatted message text (Markdown)
    */
   private formatTelegramMessage(signal: MarketSignal): string {
-    const emoji = signal.action === 'BUY' ? '🟢' :
-                  signal.action === 'SELL' ? '🔴' :
-                  signal.action === 'WATCH' ? '👀' : '⚠️';
+    const emoji =
+      signal.action === "BUY" ? "🟢" : signal.action === "SELL" ? "🔴" : signal.action === "WATCH" ? "👀" : "⚠️";
 
-    return `${emoji} *${signal.symbol}* - ${signal.timeframe}\n` +
+    return (
+      `${emoji} *${signal.symbol}* - ${signal.timeframe}\n` +
       `Signal: *${signal.signalType}* (${signal.indicator})\n` +
       `Message: ${signal.message}\n` +
       `Action: *${signal.action}*\n` +
       `Price: $${signal.price.toFixed(2)}\n` +
       `Strength: ${signal.strength}/10\n` +
-      `Time: ${new Date(signal.timestamp).toISOString()}`;
+      `Time: ${new Date(signal.timestamp).toISOString()}`
+    );
   }
 
   /**

@@ -46,8 +46,8 @@ export interface EMACrossResult {
   longEma?: number[];
   isCrossOver?: boolean; // Fast crosses above slow
   isCrossUnder?: boolean; // Fast crosses below slow
-  signal?: 'bullish' | 'bearish' | 'neutral';
-  direction?: 'up' | 'down' | 'none';
+  signal?: "bullish" | "bearish" | "neutral";
+  direction?: "up" | "down" | "none";
   strength?: number;
   crossover?: boolean;
   message?: string;
@@ -70,7 +70,7 @@ export interface MarketSignal {
   indicator: string;
   strength: number; // 1-10
   message: string;
-  action: 'BUY' | 'SELL' | 'HOLD' | 'WATCH';
+  action: "BUY" | "SELL" | "HOLD" | "WATCH";
 }
 
 export interface AlertConfig {
@@ -102,7 +102,22 @@ export interface AnalysisResult {
     bullishSignals: number;
     bearishSignals: number;
     neutralSignals: number;
-    overallSentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    overallSentiment: "BULLISH" | "BEARISH" | "NEUTRAL";
     confidenceScore: number; // 0-100
+    direction: "bullish" | "bearish" | "neutral"; // 取引方向
   };
 }
+
+// 取引シグナルの方向
+export type SignalDirection = "BUY" | "SELL";
+
+// 取引戦略
+export type SignalStrategy =
+  | "TREND_FOLLOWING"
+  | "RSI_OVERSOLD"
+  | "RSI_OVERBOUGHT"
+  | "MACD_BULLISH"
+  | "MACD_BEARISH"
+  | "EMA_CROSSOVER"
+  | "BREAKOUT"
+  | "MANUAL";
