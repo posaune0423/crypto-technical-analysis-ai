@@ -106,9 +106,12 @@ export async function executeSignalOrder(signal: SignalModel.TradeSignal): Promi
       orderId = await placeLimitOrder(signal.symbol, side, limitPrice, qty, takeProfitPrice, stopLossPrice);
     }
 
+    // IDを数値に変換
+    const signalId = typeof signal.id === "string" ? parseInt(signal.id) : signal.id;
+
     // 注文情報をDBに記録
     await OrderModel.createOrder({
-      signalId: signal.id!,
+      signalId: signalId,
       symbol: signal.symbol,
       side: side,
       orderType: DEFAULT_ORDER_TYPE,
@@ -119,7 +122,7 @@ export async function executeSignalOrder(signal: SignalModel.TradeSignal): Promi
     });
 
     // シグナルを実行済みとしてマーク
-    await SignalModel.markSignalAsExecuted(signal.id!);
+    await SignalModel.markSignalAsExecuted(signalId);
 
     console.log(`Signal executed: ${signal.symbol} ${side} ${qty}@${currentPrice} (ID: ${orderId})`);
   } catch (error) {
@@ -130,16 +133,20 @@ export async function executeSignalOrder(signal: SignalModel.TradeSignal): Promi
 
 /**
  * 未実行のシグナルをすべて処理する
+ * @returns 処理されたシグナルの配列
  */
-export async function processAllPendingSignals(): Promise<void> {
+export async function processAllPendingSignals(): Promise<SignalModel.TradeSignal[]> {
   try {
     const pendingSignals = await SignalModel.getPendingSignals();
+    const processedSignals: SignalModel.TradeSignal[] = [];
 
-    console.log(`Pending signals: ${pendingSignals.length}件`);
+    console.log(`Pending signals: ${pendingSignals.length}`);
 
     for (const signal of pendingSignals) {
       try {
-        await executeSignalOrder(signal as SignalModel.TradeSignal);
+        const tradeSignal = signal as unknown as SignalModel.TradeSignal;
+        await executeSignalOrder(tradeSignal);
+        processedSignals.push(tradeSignal);
         // APIレート制限回避のための遅延
         await sleep(2000);
       } catch (error) {
@@ -148,6 +155,8 @@ export async function processAllPendingSignals(): Promise<void> {
         continue;
       }
     }
+
+    return processedSignals;
   } catch (error) {
     console.error("Pending signal processing error", error);
     throw error;

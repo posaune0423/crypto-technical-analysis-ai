@@ -256,61 +256,144 @@ async function main() {
     });
 
     app.post("/api/signals/process", async (req, res) => {
-      logger.debug("API", "POST /api/signals/process - Processing pending signals");
       try {
-        await processAllPendingSignals();
+        logger.info("API", "未処理の取引シグナルを処理します");
+
+        const processedSignals = await processAllPendingSignals();
+
         res.json({
           status: "ok",
-          message: "All pending signals processed",
+          message: "取引シグナルの処理を完了しました",
+          data: {
+            processedCount: processedSignals.length,
+            signals: processedSignals,
+          },
         });
       } catch (error) {
-        logger.error("API", "Failed to process pending signals", error);
+        logger.error("API", "シグナル処理中にエラーが発生しました", error);
         res.status(500).json({
           status: "error",
-          message: "Failed to process pending signals",
+          message: "シグナル処理中にエラーが発生しました",
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     });
 
     app.get("/api/signals", async (req, res) => {
-      logger.debug("API", "GET /api/signals - Fetching signals");
       try {
-        const { limit } = req.query;
-        const limitNum = limit ? parseInt(limit.toString()) : 10;
+        const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
 
-        const signals = await db
-          .select()
-          .from(tradeSignals)
-          .orderBy(desc(tradeSignals.timestamp))
-          .limit(limitNum)
-          .all();
+        const signals = await db.select().from(tradeSignals).orderBy(desc(tradeSignals.timestamp)).limit(limit).all();
 
         res.json({
           status: "ok",
           data: signals,
         });
+
+        logger.debug("API", `最新の${signals.length}件の取引シグナルを取得しました`);
       } catch (error) {
-        logger.error("API", "Failed to fetch signals", error);
+        logger.error("API", "取引シグナル取得中にエラーが発生しました", error);
         res.status(500).json({
           status: "error",
-          message: "Failed to fetch signals",
+          message: "取引シグナル取得中にエラーが発生しました",
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     });
 
     app.get("/api/orders", async (req, res) => {
-      logger.debug("API", "GET /api/orders - Fetching orders");
       try {
-        const orders = await OrderModel.getRecentOrders();
+        const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+
+        const orders = await OrderModel.getRecentOrders(limit);
+
         res.json({
           status: "ok",
           data: orders,
         });
+
+        logger.debug("API", `最新の${orders.length}件の注文履歴を取得しました`);
       } catch (error) {
-        logger.error("API", "Failed to fetch orders", error);
+        logger.error("API", "注文履歴取得中にエラーが発生しました", error);
         res.status(500).json({
           status: "error",
-          message: "Failed to fetch orders",
+          message: "注文履歴取得中にエラーが発生しました",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    });
+
+    // 自動取引のON/OFF切り替えエンドポイント
+    app.route("/api/autotrading/toggle").post((req, res) => {
+      try {
+        const { enable } = req.body;
+
+        if (typeof enable !== "boolean") {
+          res.status(400).json({
+            status: "error",
+            message: "リクエストにはenableフィールド（true/false）が必要です",
+          });
+          return;
+        }
+
+        monitorService.setAutoTrading(enable);
+
+        res.json({
+          status: "ok",
+          message: `自動取引を${enable ? "有効" : "無効"}にしました`,
+          data: { autoTradingEnabled: enable },
+        });
+
+        logger.info("API", `自動取引を${enable ? "有効" : "無効"}に切り替えました`);
+      } catch (error) {
+        logger.error("API", "自動取引設定中にエラーが発生しました", error);
+        res.status(500).json({
+          status: "error",
+          message: "自動取引設定中にエラーが発生しました",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    });
+
+    // アカウントサイズとリスク設定の更新エンドポイント
+    app.route("/api/autotrading/settings").post((req, res) => {
+      try {
+        const { accountSize, maxRiskPerTrade } = req.body;
+
+        if (typeof accountSize !== "number" || accountSize <= 0) {
+          res.status(400).json({
+            status: "error",
+            message: "有効なアカウントサイズ（正の数値）を指定してください",
+          });
+          return;
+        }
+
+        if (typeof maxRiskPerTrade !== "number" || maxRiskPerTrade <= 0 || maxRiskPerTrade > 100) {
+          res.status(400).json({
+            status: "error",
+            message: "有効な最大リスク率（0〜100の間の数値）を指定してください",
+          });
+          return;
+        }
+
+        monitorService.updatePositionSizeManager(accountSize, maxRiskPerTrade);
+
+        res.json({
+          status: "ok",
+          message: "取引設定を更新しました",
+          data: { accountSize, maxRiskPerTrade },
+        });
+
+        logger.info(
+          "API",
+          `取引設定を更新しました: アカウントサイズ=${accountSize}USD, 最大リスク=${maxRiskPerTrade}%`,
+        );
+      } catch (error) {
+        logger.error("API", "取引設定の更新中にエラーが発生しました", error);
+        res.status(500).json({
+          status: "error",
+          message: "取引設定の更新中にエラーが発生しました",
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     });

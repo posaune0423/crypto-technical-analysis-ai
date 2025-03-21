@@ -1,28 +1,54 @@
 import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { db } from "../db";
 import { tradeSignals } from "../db/schema";
+import { SignalDirection, SignalStrategy } from "../types";
 
 export interface TradeSignal {
-  id?: number;
+  id: number | string; // DB生成前はstring、保存後はnumber
   symbol: string;
-  direction: string; // "BUY" or "SELL"
-  price: number;
-  strategy: string;
-  strength?: number;
-  timestamp?: string;
-  isExecuted?: number;
+  direction: SignalDirection; // "BUY" or "SELL"
+  price?: number;
+  strategy: SignalStrategy;
+  strength: number;
+  positionSizeUsd: number;
+  leverage: number;
+  timestamp: string;
+  executed: boolean;
+  isExecuted?: number; // DB互換性のため
+  metadata?: {
+    analysis?: {
+      rsi?: number;
+      macd?: {
+        value?: number;
+        signal?: number;
+        histogram?: number;
+      };
+      confidenceScore?: number;
+    };
+    executionDetails?: {
+      orderId?: string;
+      executionPrice?: number;
+      executionTime?: string;
+      takeProfitPrice?: number;
+      stopLossPrice?: number;
+    };
+  };
 }
 
 // シグナルの作成
 export async function createSignal(signal: TradeSignal) {
-  return await db
-    .insert(tradeSignals)
-    .values({
-      ...signal,
-      timestamp: signal.timestamp || new Date().toISOString(),
-      isExecuted: signal.isExecuted || 0,
-    })
-    .returning();
+  // DBのスキーマに合わせてデータを整形
+  const dbSignal = {
+    symbol: signal.symbol,
+    direction: signal.direction,
+    price: signal.price || 0, // DBはNOT NULL制約があるため
+    strategy: signal.strategy,
+    strength: signal.strength,
+    timestamp: signal.timestamp || new Date().toISOString(),
+    isExecuted: signal.executed ? 1 : 0,
+  };
+
+  return await db.insert(tradeSignals).values(dbSignal).returning();
 }
 
 // シグナルの取得（IDによる）
