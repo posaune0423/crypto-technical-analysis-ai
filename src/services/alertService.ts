@@ -1,11 +1,13 @@
 import axios from "axios";
 import { config } from "../config";
 import { AnalysisResult, MarketSignal } from "../types";
+import { Logger, LogLevel } from "../utils/logger";
 
 export class AlertService {
   private previousAnalysis: Map<string, AnalysisResult>;
   private telegramBotToken: string;
   private telegramChatId: string;
+  private logger: Logger;
   private alertThreshold: number;
 
   constructor() {
@@ -13,6 +15,11 @@ export class AlertService {
     this.telegramBotToken = config.telegram.botToken;
     this.telegramChatId = config.telegram.chatId;
     this.alertThreshold = config.alerts.threshold;
+    this.logger = new Logger({
+      level: LogLevel.DEBUG,
+      enableColors: true,
+      enableTimestamp: true,
+    });
   }
 
   /**
@@ -21,6 +28,7 @@ export class AlertService {
    * @returns Array of alerts (if any)
    */
   processAnalysisResult(analysis: AnalysisResult): MarketSignal[] {
+    this.logger.debug("AlertService", `Processing analysis result for ${analysis.symbol} on ${analysis.timeframe}`);
     const key = `${analysis.symbol}-${analysis.timeframe}`;
     const previousAnalysis = this.previousAnalysis.get(key);
     const alerts: MarketSignal[] = [];

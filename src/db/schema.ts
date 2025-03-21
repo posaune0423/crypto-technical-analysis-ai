@@ -1,4 +1,26 @@
+import { relations } from "drizzle-orm";
 import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+
+// ユーザーテーブル
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  createdAt: text("created_at").notNull().default(new Date().toISOString()),
+  updatedAt: text("updated_at").notNull().default(new Date().toISOString()),
+});
+
+// ユーザーリレーション定義
+export const usersRelations = relations(users, ({ many }) => ({
+  assets: many(assets),
+}));
+
+// 資産テーブル
+export const assets = sqliteTable("assets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  symbol: text("symbol").notNull(),
+  name: text("name").notNull(),
+  leverage: integer("leverage").notNull().default(1),
+  positionSizeUsd: real("position_size_usd").notNull().default(100),
+});
 
 // トレードシグナルのテーブル定義
 export const tradeSignals = sqliteTable("trade_signals", {

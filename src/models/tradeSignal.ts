@@ -36,7 +36,7 @@ export interface TradeSignal {
 }
 
 // シグナルの作成
-export async function createSignal(signal: TradeSignal) {
+export async function createSignal(signal: TradeSignal): Promise<TradeSignal> {
   // DBのスキーマに合わせてデータを整形
   const dbSignal = {
     symbol: signal.symbol,
@@ -48,7 +48,23 @@ export async function createSignal(signal: TradeSignal) {
     isExecuted: signal.executed ? 1 : 0,
   };
 
-  return await db.insert(tradeSignals).values(dbSignal).returning();
+  const result = await db.insert(tradeSignals).values(dbSignal).returning();
+  const savedSignal = result[0];
+
+  // DB結果をTradeSignalの形式に変換して返す
+  return {
+    id: savedSignal.id,
+    symbol: savedSignal.symbol,
+    direction: savedSignal.direction as SignalDirection,
+    price: savedSignal.price,
+    strategy: savedSignal.strategy as SignalStrategy,
+    strength: savedSignal.strength || 0,
+    positionSizeUsd: signal.positionSizeUsd,
+    leverage: signal.leverage,
+    timestamp: savedSignal.timestamp,
+    executed: savedSignal.isExecuted === 1,
+    metadata: signal.metadata,
+  };
 }
 
 // シグナルの取得（IDによる）

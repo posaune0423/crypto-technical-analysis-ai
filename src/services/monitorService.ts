@@ -11,13 +11,13 @@ export class MonitorService {
   private exchangeService: ExchangeService;
   private technicalAnalysisService: TechnicalAnalysisService;
   private alertService: AlertService;
-  private assets: AssetConfig[];
-  private isRunning: boolean;
+  private assets: AssetConfig[] = [];
+  private isRunning = false;
   private pollingInterval: number;
   private logger: Logger;
   private timer: NodeJS.Timeout | null = null;
   private strategyService: StrategyService;
-  private enableAutoTrading = false;
+  private enableAutoTrading = true;
 
   constructor() {
     this.exchangeService = new ExchangeService();
@@ -149,18 +149,7 @@ export class MonitorService {
           const analysis = this.technicalAnalysisService.analyzeMarket(asset.symbol, timeframe, candles);
 
           // Process results and check for alerts
-          const alerts = this.alertService.processAnalysisResult(analysis);
-
-          if (alerts.length > 0) {
-            this.logger.info(
-              "Monitor",
-              `Generated ${alerts.length} alerts for ${asset.symbol} on ${timeframe} timeframe`,
-              {
-                alertCount: alerts.length,
-                firstAlert: alerts[0],
-              },
-            );
-          }
+          await this.processAnalysisResult(asset.symbol, timeframe, analysis);
 
           // Optionally store/log the analysis results
           this.logAnalysisSummary(analysis);
@@ -307,35 +296,112 @@ export class MonitorService {
   }
 
   /**
-   * 取引処理
+   * 分析結果に基づいてトレード処理を行う
+   * 信頼性スコアが高い場合にのみシグナルを生成し、トレードを実行する
    * @param symbol シンボル
-   * @param result 分析結果
+   * @param analysisResult 分析結果
    */
-  private async processTrading(symbol: string, result: AnalysisResult): Promise<void> {
+  async processTrading(symbol: string, analysisResult: AnalysisResult) {
+    // 自動売買が有効になっていない場合は何もしない
+    if (!this.enableAutoTrading) {
+      this.logger.debug("AutoTrading", `自動売買が無効なので ${symbol} のトレード処理をスキップします`);
+      return;
+    }
+
     try {
-      // 確信度が閾値を超えているかチェック
-      if (result.summary.confidenceScore >= 60) {
-        this.logger.info(
-          "Monitor",
-          `${symbol}の取引シグナルを検出: 確信度=${result.summary.confidenceScore}, センチメント=${result.summary.overallSentiment}`,
+      const { timeframe, summary, indicators } = analysisResult;
+      this.logger.debug("TradeDecision", `${symbol}(${timeframe})のトレード判断を開始します`);
+
+      // 信頼性スコアが閾値を超えているか確認
+      const confidenceScore = summary.confidenceScore;
+      const requiredScore = 65; // 信頼性スコアの閾値を65に設定
+
+      if (confidenceScore < requiredScore) {
+        this.logger.debug(
+          "SignalCheck",
+          `${symbol}の信頼性スコア(${confidenceScore})が閾値(${requiredScore})未満のためシグナル生成をスキップします`,
         );
+        return;
+      }
 
-        // シグナル生成と執行
-        const signal = await this.strategyService.processAnalysisResult(symbol, result);
+      // 市場の状態を確認（ボラティリティが高すぎる場合などはスキップ）
+      if (indicators.bollinger && indicators.bollinger.bandwidth > 0.1) {
+        this.logger.debug(
+          "MarketCheck",
+          `${symbol}のボラティリティが高すぎます (${indicators.bollinger.bandwidth.toFixed(3)})。トレードをスキップします`,
+        );
+        return;
+      }
 
-        if (signal) {
+      // RSIが極端な値の場合は慎重に判断
+      if (indicators.rsi) {
+        const rsiValue = indicators.rsi.value;
+        if (rsiValue < 20 || rsiValue > 80) {
           this.logger.info(
-            "Monitor",
-            `${symbol}の取引シグナルを生成しました: ${signal.direction} (戦略: ${signal.strategy}, レバレッジ: ${signal.leverage}x)`,
+            "TechnicalCheck",
+            `${symbol}のRSIが極端な値です (${rsiValue.toFixed(1)})。これは重要なシグナルになります`,
           );
         }
-      } else {
-        this.logger.debug("Monitor", `${symbol}の確信度が不十分: ${result.summary.confidenceScore} (60以上必要)`);
+      }
+
+      // 同じシンボルの最新シグナルを取得
+      const latestSignal = await this.strategyService.getLatestSignalForSymbol(symbol);
+
+      // 1時間以内にシグナルが生成されているか確認
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+      if (latestSignal && new Date(latestSignal.timestamp) > oneHourAgo) {
+        this.logger.info(
+          "SignalCheck",
+          `${symbol}の最新シグナルは1時間以内(${new Date(latestSignal.timestamp).toLocaleString()})に既に生成されています。スキップします。`,
+        );
+        return;
+      }
+
+      // 取引方向と現在の市場トレンドを比較
+      const marketTrend = summary.overallSentiment;
+      this.logger.debug("MarketTrend", `${symbol}の市場トレンド: ${marketTrend}, 確信度: ${confidenceScore}%`);
+
+      // MACDの確認（トレンドの強さの確認）
+      let trendStrength = "中程度";
+      if (indicators.macd) {
+        const macdHistogram = indicators.macd.histogram;
+        if (Math.abs(macdHistogram) > 0.5) {
+          trendStrength = "強い";
+        } else if (Math.abs(macdHistogram) < 0.2) {
+          trendStrength = "弱い";
+        }
+
+        this.logger.debug(
+          "TechnicalIndicator",
+          `${symbol}のMACDヒストグラム: ${macdHistogram.toFixed(4)}, トレンドの強さ: ${trendStrength}`,
+        );
+      }
+
+      // トレードの総合判断
+      this.logger.info(
+        "TradeDecision",
+        `${symbol}のトレード判断: 信頼性=${confidenceScore}%, 市場=${marketTrend}, トレンド=${trendStrength}`,
+      );
+
+      // シグナルを生成して保存
+      const signal = await this.strategyService.processAnalysisResult(symbol, analysisResult);
+
+      if (signal) {
+        // シグナル生成の詳細をログに記録
+        this.logger.info(
+          "SignalGenerated",
+          `${symbol}の${signal.direction}シグナルを生成しました (戦略: ${signal.strategy})`,
+        );
+        this.logger.debug(
+          "SignalDetails",
+          `ID: ${signal.id}, レバレッジ: ${signal.leverage}x, サイズ: ${signal.positionSizeUsd}USD, 時間: ${new Date(signal.timestamp).toLocaleString()}`,
+        );
       }
     } catch (error) {
       this.logger.error(
-        "Monitor",
-        `取引処理中にエラーが発生: ${error instanceof Error ? error.message : String(error)}`,
+        "TradingError",
+        `${symbol}のトレード処理中にエラーが発生: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }

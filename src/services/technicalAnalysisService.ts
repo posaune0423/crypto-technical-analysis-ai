@@ -558,6 +558,7 @@ export class TechnicalAnalysisService {
         neutralSignals,
         overallSentiment,
         confidenceScore,
+        direction: overallSentiment === "BULLISH" ? "bullish" : overallSentiment === "BEARISH" ? "bearish" : "neutral",
       },
     };
   }

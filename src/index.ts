@@ -407,21 +407,13 @@ async function main() {
         logger.info("Monitor", "Starting market monitor");
         monitorService.start();
 
+        // 自動売買を有効化
+        monitorService.setAutoTrading(true);
+        logger.info("App", "自動売買システムを有効化しました");
+
         // シグナル処理スケジューラを開始
         logger.info("App", "Starting automated trading system");
         startSignalProcessing();
-
-        // デモとして起動時に最初のシグナルを生成
-        if (config.app.nodeEnv === "development") {
-          setTimeout(async () => {
-            try {
-              await generateRandomSignal();
-              logger.info("App", "Generated demo trade signal");
-            } catch (error) {
-              logger.error("App", "Failed to generate demo signal", error);
-            }
-          }, 5000);
-        }
       }, 1000);
     });
 

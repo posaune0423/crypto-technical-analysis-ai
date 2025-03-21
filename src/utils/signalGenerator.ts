@@ -1,6 +1,7 @@
 import { TRADE_SYMBOLS } from "../config/bybit";
 import { getCurrentPrice } from "../lib/bybitClient";
 import { createSignal } from "../models/tradeSignal";
+import { SignalStrategy } from "../types";
 
 /**
  * ランダムな方向（買い/売り）を生成
@@ -23,8 +24,16 @@ function getRandomSymbol(): string {
  * ランダムな戦略名を生成
  * @returns 戦略名
  */
-function getRandomStrategy(): string {
-  const strategies = ["MovingAverageCross", "RSIReversal", "BreakoutStrategy", "BollingerBandSqueeze", "MACDCrossover"];
+function getRandomStrategy(): SignalStrategy {
+  const strategies: SignalStrategy[] = [
+    "TREND_FOLLOWING",
+    "RSI_OVERSOLD",
+    "RSI_OVERBOUGHT",
+    "MACD_BULLISH",
+    "MACD_BEARISH",
+    "EMA_CROSSOVER",
+    "BREAKOUT",
+  ];
 
   const index = Math.floor(Math.random() * strategies.length);
   return strategies[index];
@@ -50,11 +59,16 @@ export async function generateRandomSignal() {
     const strength = getRandomStrength();
 
     const signal = await createSignal({
+      id: `signal-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       symbol,
       direction,
       price,
       strategy,
       strength,
+      positionSizeUsd: 100,
+      leverage: 5,
+      timestamp: new Date().toISOString(),
+      executed: false,
     });
 
     console.log(`test signal generated: ${symbol} ${direction} @ ${price} (${strategy})`);
@@ -71,17 +85,22 @@ export async function generateRandomSignal() {
 export async function generateForcedSignal(
   symbol: string,
   direction: "BUY" | "SELL",
-  strategy: string = "ManualEntry",
+  strategy: SignalStrategy = "MANUAL",
 ) {
   try {
     const price = await getCurrentPrice(symbol);
 
     const signal = await createSignal({
+      id: `forced-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       symbol,
       direction,
       price,
       strategy,
       strength: 1.0, // 確信度100%
+      positionSizeUsd: 100,
+      leverage: 10,
+      timestamp: new Date().toISOString(),
+      executed: false,
     });
 
     console.log(`forced signal generated: ${symbol} ${direction} @ ${price} (${strategy})`);
